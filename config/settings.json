@@ -1,0 +1,22 @@
+{
+  "env": {
+    "MAX_MCP_OUTPUT_TOKENS": "50000",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "LSP",
+      "TodoRead",
+      "TodoWrite",
+      "WebFetch"
+    ]
+  },
+  "alwaysThinkingEnabled": true,
+  "skipDangerousModePermissionPrompt": true
+}

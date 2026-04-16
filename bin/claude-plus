@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+# claude-plus wrapper.
+#
+# Claude Code's default system prompt includes a dynamic environment block
+# (cwd, git root, platform, date) that is stripped when you pass
+# --system-prompt-file. This wrapper rebuilds that block and appends it via
+# --append-system-prompt so our custom prompt in ~/.claude/anthropic.txt
+# does not lose the context.
+
+cwd="$(pwd)"
+worktree="$(git rev-parse --show-toplevel 2>/dev/null || echo "$cwd")"
+is_git="$(git rev-parse --is-inside-work-tree 2>/dev/null && echo yes || echo no)"
+platform="$(uname -s | tr '[:upper:]' '[:lower:]')"
+today="$(date '+%a %b %d %Y')"
+
+env_block="$(cat <<EOF
+Here is some useful information about the environment you are running in:
+<env>
+  Working directory: $cwd
+  Workspace root folder: $worktree
+  Is directory a git repo: $is_git
+  Platform: $platform
+  Today's date: $today
+</env>
+EOF
+)"
+
+exec claude \
+  --system-prompt-file "$HOME/.claude/anthropic.txt" \
+  --append-system-prompt "$env_block" \
+  "$@"

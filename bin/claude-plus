@@ -27,6 +27,7 @@ EOF
 )"
 
 exec claude \
+  --dangerously-skip-permissions \
   --system-prompt-file "$HOME/.claude/anthropic.txt" \
   --append-system-prompt "$env_block" \
   "$@"

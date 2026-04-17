@@ -7,6 +7,14 @@
 # --system-prompt-file. This wrapper rebuilds that block and appends it via
 # --append-system-prompt so our custom prompt in ~/.claude/anthropic.txt
 # does not lose the context.
+#
+# CLAUDE_CODE_SANDBOXED=1 suppresses the "Do you trust the files in this
+# folder?" dialog. --dangerously-skip-permissions does NOT bypass that
+# dialog (verified in 2.1.112: trust uses a separate gate that only
+# honors this env var, -p mode, or a pre-existing trust entry in
+# ~/.claude.json). Setup also pre-trusts $HOME so per-path trust checks
+# (e.g. MCP tools that take a cwd parameter pointing outside the
+# workspace) don't prompt either.
 
 cwd="$(pwd)"
 worktree="$(git rev-parse --show-toplevel 2>/dev/null || echo "$cwd")"
@@ -25,6 +33,8 @@ Here is some useful information about the environment you are running in:
 </env>
 EOF
 )"
+
+export CLAUDE_CODE_SANDBOXED=1
 
 exec claude \
   --dangerously-skip-permissions \

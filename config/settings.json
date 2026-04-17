@@ -18,5 +18,7 @@
     ]
   },
   "alwaysThinkingEnabled": true,
-  "skipDangerousModePermissionPrompt": true
+  "skipDangerousModePermissionPrompt": true,
+  "autoMemoryEnabled": false,
+  "awaySummaryEnabled": false
 }

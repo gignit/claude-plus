@@ -9,9 +9,11 @@ A drop-in enhancement for [Claude Code](https://github.com/anthropics/claude-cod
 - Replaces Claude Code's built-in system prompt with a direct, production-oriented version (tone, professional objectivity, code quality, tool policy).
 - Adds sane permission defaults: `Bash`, `Read`, `Edit`, `Write`, `Glob`, `Grep`, `LSP`, `WebFetch`, `TodoRead`, `TodoWrite`.
 - Enables `alwaysThinkingEnabled` and `skipDangerousModePermissionPrompt`.
+- Disables auto-memory (`autoMemoryEnabled: false`) and the away-session recap (`awaySummaryEnabled: false`).
 - Raises `MAX_MCP_OUTPUT_TOKENS` to `50000` and sets `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`.
 - Registers the [chrome-devtools MCP](https://www.npmjs.com/package/chrome-devtools-mcp) server.
 - Ships a `claude-plus` wrapper that re-injects the environment block (cwd, git root, platform, date) that Claude strips when you pass `--system-prompt-file`.
+- Suppresses the "Do you trust this folder?" dialog in two places `--dangerously-skip-permissions` doesn't reach: the startup trust gate (via `CLAUDE_CODE_SANDBOXED=1` in the wrapper) and the per-path trust gate used by MCP tools that operate outside the workspace (via a `hasTrustDialogAccepted: true` entry on `$HOME` in `~/.claude.json`, which Claude's upward-walking trust check inherits into every subdirectory).
 
 ## Install
 
@@ -46,8 +48,8 @@ claude-plus --resume
 | `~/.local/bin/claude-plus` | Wrapper binary |
 | `~/.claude/anthropic.txt` | Enhanced system prompt |
 | `~/.claude/CLAUDE.md` | Global rules |
-| `~/.claude/settings.json` | Merged `env`, `permissions`, `alwaysThinkingEnabled`, `skipDangerousModePermissionPrompt` |
-| `~/.claude.json` | Adds `chrome-devtools` to `mcpServers` (unless `--skip-chrome-devtools`) |
+| `~/.claude/settings.json` | Merged `env`, `permissions`, `alwaysThinkingEnabled`, `skipDangerousModePermissionPrompt`, `autoMemoryEnabled`, `awaySummaryEnabled` |
+| `~/.claude.json` | Adds `chrome-devtools` to `mcpServers` (unless `--skip-chrome-devtools`) and sets `projects["$HOME"].hasTrustDialogAccepted = true` to suppress per-path trust prompts |
 
 Every file the installer overwrites under `~/.claude/` is backed up to `~/.claude/backups/claude-plus-<timestamp>/` first, with a `manifest.txt` listing the originals.
 
@@ -66,17 +68,9 @@ Running both gives you the full experience: enhanced prompts, sane defaults, Chr
 
 ## Uninstall
 
-```bash
-make uninstall
-```
+There is no uninstaller. Installs merge into your existing `~/.claude/settings.json` and `~/.claude.json`, so we can't reliably tell which keys were yours and which came from claude-plus. Remove what you want by hand, or restore the pre-install snapshot from `~/.claude/backups/claude-plus-<timestamp>/` (the installer writes one before every change; `manifest.txt` lists the originals).
 
-Removes the wrapper, the prompt files (only if unmodified), the claude-plus keys from `settings.json`, and the `chrome-devtools` MCP entry from `~/.claude.json`.
-
-To restore the files that existed before install:
-
-```bash
-scripts/uninstall.sh --restore-backup=$HOME/.claude/backups/claude-plus-<timestamp>
-```
+To fully detach, also `rm ~/.local/bin/claude-plus`.
 
 ## License
 

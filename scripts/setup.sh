@@ -134,6 +134,37 @@ else
   echo "  [copied]   ~/.claude/settings.json"
 fi
 
+# -- Pre-trust $HOME in ~/.claude.json -------------------------------------
+# Claude Code's per-path trust check (isPathTrusted) walks up the directory
+# tree looking for projects[path].hasTrustDialogAccepted. Setting it on
+# $HOME pre-approves every subdirectory, so MCP tools that operate on
+# directories outside the current workspace (e.g. the coder MCP with a
+# cwd parameter) don't surface an approval prompt.
+if [ -f "$CLAUDE_JSON" ]; then
+  merged="$(jq --arg home "$HOME" '
+    .projects = ((.projects // {}) | .[$home] = (.[$home] // {
+      "allowedTools": [],
+      "mcpContextUris": [],
+      "mcpServers": {},
+      "enabledMcpjsonServers": [],
+      "disabledMcpjsonServers": [],
+      "hasTrustDialogAccepted": false,
+      "projectOnboardingSeenCount": 0,
+      "hasClaudeMdExternalIncludesApproved": false,
+      "hasClaudeMdExternalIncludesWarningShown": false
+    }) | .[$home].hasTrustDialogAccepted = true)
+  ' "$CLAUDE_JSON")"
+  if [ "$(jq -S . "$CLAUDE_JSON")" = "$(echo "$merged" | jq -S .)" ]; then
+    echo "  [current]  ~/.claude.json (\$HOME trust)"
+  else
+    backup_file "$CLAUDE_JSON"
+    echo "$merged" > "$CLAUDE_JSON"
+    echo "  [merged]   ~/.claude.json (\$HOME trust)"
+  fi
+else
+  echo "  [skipped]  ~/.claude.json not found (run claude first) -- \$HOME trust"
+fi
+
 # -- Merge chrome-devtools MCP into ~/.claude.json -------------------------
 if [ "$SKIP_CHROME" -eq 1 ]; then
   echo "  [skipped]  ~/.claude.json (chrome-devtools MCP, --skip-chrome-devtools)"

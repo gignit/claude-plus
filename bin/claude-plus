@@ -18,7 +18,7 @@
 
 cwd="$(pwd)"
 worktree="$(git rev-parse --show-toplevel 2>/dev/null || echo "$cwd")"
-is_git="$(git rev-parse --is-inside-work-tree 2>/dev/null && echo yes || echo no)"
+is_git="$(git rev-parse --is-inside-work-tree >/dev/null 2>/dev/null && echo yes || echo no)"
 platform="$(uname -s | tr '[:upper:]' '[:lower:]')"
 today="$(date '+%a %b %d %Y')"
 

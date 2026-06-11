@@ -12,13 +12,27 @@
       "Glob",
       "Grep",
       "LSP",
-      "TodoRead",
-      "TodoWrite",
-      "WebFetch"
-    ]
+      "WebFetch",
+      "TaskCreate",
+      "TaskGet",
+      "TaskList",
+      "TaskOutput",
+      "TaskStop",
+      "TaskUpdate"
+    ],
+    "defaultMode": "bypassPermissions"
   },
-  "alwaysThinkingEnabled": true,
+  "model": "fable",
+  "effortLevel": "xhigh",
+  "editorMode": "vim",
+  "theme": "dark",
+  "enableAllProjectMcpServers": true,
   "skipDangerousModePermissionPrompt": true,
   "autoMemoryEnabled": false,
-  "awaySummaryEnabled": false
+  "awaySummaryEnabled": false,
+  "autoCompactEnabled": false,
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); cwd=$(echo \"$input\" | jq -r '.workspace.current_dir'); model=$(echo \"$input\" | jq -r '.model.display_name'); user=$(whoami); host=$(hostname -s); git_info=''; if git rev-parse --git-dir > /dev/null 2>&1; then branch=$(git branch --show-current 2>/dev/null || echo 'detached'); status=''; if [ -n \"$(git status --porcelain 2>/dev/null)\" ]; then status=' *'; fi; git_info=\" (${branch}${status})\"; fi; printf \"%s@%s:%s%s [%s]\" \"$user\" \"$host\" \"$cwd\" \"$git_info\" \"$model\""
+  }
 }

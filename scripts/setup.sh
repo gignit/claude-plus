@@ -4,21 +4,23 @@ set -euo pipefail
 # claude-plus installer. Idempotent.
 #
 # Writes:
-#   ~/.local/bin/claude-plus          -- wrapper binary
-#   ~/.claude/anthropic.txt           -- enhanced system prompt
 #   ~/.claude/CLAUDE.md               -- global rules
-#   ~/.claude/settings.json           -- merges env/permissions/flags
-#   ~/.claude.json                    -- adds chrome-devtools MCP
-#                                        (unless --skip-chrome-devtools)
+#   ~/.claude/settings.json           -- merges env/permissions/defaults
+#   ~/.claude.json                    -- pre-trusts $HOME, adds chrome-devtools
+#                                        MCP (unless --skip-chrome-devtools)
+#
+# Removes (legacy, from pre-June-2026 versions of claude-plus):
+#   ~/.local/bin/claude-plus          -- wrapper binary
+#   ~/.claude/anthropic.txt           -- replacement system prompt
 #
 # Output labels:
 #   [copied]   file did not exist, installed fresh
 #   [updated]  file existed with different content, overwritten
 #   [current]  file already matches, no change made
 #   [merged]   JSON file updated with our keys
-#   [ok]       JSON file already contained our keys, no change made
+#   [removed]  legacy artifact backed up and deleted
 #
-# Any file overwritten in ~/.claude/ (or ~/.claude.json) is first copied to
+# Any file overwritten or removed under $HOME is first copied to
 #   ~/.claude/backups/claude-plus-<timestamp>/
 # and logged in that directory's manifest.txt.
 
@@ -47,9 +49,7 @@ done
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG_DIR="$REPO_ROOT/config"
-BIN_DIR="$REPO_ROOT/bin"
 
-BIN_TARGET="$HOME/.local/bin"
 CLAUDE_DIR="$HOME/.claude"
 CLAUDE_JSON="$HOME/.claude.json"
 SETTINGS_PATH="$CLAUDE_DIR/settings.json"
@@ -66,8 +66,9 @@ for cmd in claude jq; do
 done
 
 # -- Backup helpers ---------------------------------------------------------
-# Nanosecond timestamp avoids collisions when installs run back-to-back.
-BACKUP_DIR="$HOME/.claude/backups/claude-plus-$(date +%Y%m%d-%H%M%S-%N)"
+# PID suffix avoids collisions when installs run back-to-back (BSD date has
+# no %N, so nanoseconds aren't portable).
+BACKUP_DIR="$HOME/.claude/backups/claude-plus-$(date +%Y%m%d-%H%M%S)-$$"
 MANIFEST=""
 
 backup_file() {
@@ -109,15 +110,29 @@ install_file() {
   fi
 }
 
-# -- Install binary and prompt files ----------------------------------------
-mkdir -p "$BIN_TARGET" "$CLAUDE_DIR"
-install_file "$BIN_DIR/claude-plus"     "$BIN_TARGET/claude-plus"     0755 "~/.local/bin/claude-plus"
-install_file "$CONFIG_DIR/anthropic.txt" "$CLAUDE_DIR/anthropic.txt"  0644 "~/.claude/anthropic.txt"
-install_file "$CONFIG_DIR/CLAUDE.md"     "$CLAUDE_DIR/CLAUDE.md"      0644 "~/.claude/CLAUDE.md"
+# -- Remove legacy artifacts -------------------------------------------------
+# Earlier versions replaced Claude Code's system prompt (~/.claude/anthropic.txt)
+# and shipped a wrapper binary to re-inject the environment block. The stock
+# system prompt is tuned per model (Fable 5 and later) and should not be
+# replaced, so both are retired. Back up and delete if a previous install
+# left them behind.
+for legacy in "$HOME/.local/bin/claude-plus" "$CLAUDE_DIR/anthropic.txt"; do
+  if [ -e "$legacy" ]; then
+    backup_file "$legacy"
+    rm "$legacy"
+    echo "  [removed]  ${legacy/#$HOME/~} (legacy)"
+  fi
+done
+
+# -- Install global rules ----------------------------------------------------
+mkdir -p "$CLAUDE_DIR"
+install_file "$CONFIG_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md" 0644 "~/.claude/CLAUDE.md"
 
 # -- Merge settings.json ----------------------------------------------------
-# Recursive merge with our keys winning on conflicts. Only rewrite the file
-# if the resulting content actually differs.
+# Recursive merge with our keys winning on conflicts (arrays are replaced,
+# not unioned, so stale permission entries get refreshed). Keys we don't
+# ship -- hooks, plugins, marketplaces -- are left untouched. Only rewrite
+# the file if the resulting content actually differs.
 ours="$CONFIG_DIR/settings.json"
 
 if [ -f "$SETTINGS_PATH" ]; then
@@ -137,9 +152,9 @@ fi
 # -- Pre-trust $HOME in ~/.claude.json -------------------------------------
 # Claude Code's per-path trust check (isPathTrusted) walks up the directory
 # tree looking for projects[path].hasTrustDialogAccepted. Setting it on
-# $HOME pre-approves every subdirectory, so MCP tools that operate on
-# directories outside the current workspace (e.g. the coder MCP with a
-# cwd parameter) don't surface an approval prompt.
+# $HOME pre-approves every subdirectory, so neither the startup trust gate
+# nor MCP tools that operate on directories outside the current workspace
+# (e.g. the coder MCP with a cwd parameter) surface an approval prompt.
 if [ -f "$CLAUDE_JSON" ]; then
   merged="$(jq --arg home "$HOME" '
     .projects = ((.projects // {}) | .[$home] = (.[$home] // {
@@ -195,22 +210,9 @@ if [ -n "$MANIFEST" ]; then
   echo "  backups -> ${BACKUP_DIR/#$HOME/~}"
 fi
 
-# -- PATH hint --------------------------------------------------------------
-case ":$PATH:" in
-  *":$BIN_TARGET:"*) ;;
-  *)
-    echo ""
-    echo "  NOTE: $BIN_TARGET is not on your PATH."
-    echo "        Add this to your shell rc (bash/zsh):"
-    echo "          export PATH=\"\$HOME/.local/bin:\$PATH\""
-    echo "        Or for fish:"
-    echo "          fish_add_path \$HOME/.local/bin"
-    ;;
-esac
-
 # -- Summary ----------------------------------------------------------------
 echo ""
-echo "  [ok] claude-plus installed. Run: claude-plus"
+echo "  [ok] claude-plus installed. Run: claude"
 echo ""
 echo "  For the full experience (LSP servers + plugin wiring), also install"
 echo "  lsp-manager: https://github.com/gignit/lsp-manager"

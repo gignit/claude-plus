@@ -14,6 +14,7 @@ A drop-in setup for [Claude Code](https://github.com/anthropics/claude-code) tha
   - Model `fable` at `xhigh` effort, vim editor mode, dark theme.
   - Disables auto-memory, away-session recap, and auto-compact; skips the dangerous-mode permission prompt.
   - A `user@host:cwd (branch) [model]` status line.
+  - No hooks, deliberately: destructive-command blocking is unnecessary inside a VM, format-on-save mid-task breaks an agent's exact-match sequential edits, and CLAUDE.md now survives compaction natively.
   - Keys it doesn't ship (hooks, plugins, marketplaces) are left untouched, so it composes with lsp-manager.
 - Installs global rules to `~/.claude/CLAUDE.md`.
 - Registers the [chrome-devtools MCP](https://www.npmjs.com/package/chrome-devtools-mcp) server.
@@ -59,7 +60,7 @@ Every file the installer overwrites or removes is backed up to `~/.claude/backup
 
 ## Companion: lsp-manager
 
-claude-plus handles defaults and global config. For LSP servers, Claude Code plugin wiring, and format/safety hooks, pair it with [lsp-manager](https://github.com/gignit/lsp-manager):
+claude-plus handles defaults and global config. For LSP servers and Claude Code plugin wiring, pair it with [lsp-manager](https://github.com/gignit/lsp-manager):
 
 ```bash
 git clone git@github.com:gignit/lsp-manager.git

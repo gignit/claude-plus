@@ -23,7 +23,6 @@
     "defaultMode": "bypassPermissions"
   },
   "model": "fable",
-  "effortLevel": "xhigh",
   "editorMode": "vim",
   "theme": "dark",
   "enableAllProjectMcpServers": true,

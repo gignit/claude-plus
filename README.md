@@ -11,7 +11,7 @@ A drop-in setup for [Claude Code](https://github.com/anthropics/claude-code) tha
 - Merges defaults into `~/.claude/settings.json`:
   - `permissions.defaultMode: bypassPermissions` (replaces the old wrapper's `--dangerously-skip-permissions` flag -- no alias or wrapper needed) plus an allow list using current tool names.
   - `MAX_MCP_OUTPUT_TOKENS=50000` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`.
-  - Model `fable` at `xhigh` effort, vim editor mode, dark theme.
+  - Model `fable`, vim editor mode, dark theme (reasoning effort is left at the default, not forced).
   - Disables auto-memory, away-session recap, and auto-compact; skips the dangerous-mode permission prompt.
   - A `user@host:cwd (branch) [model]` status line.
   - No hooks, deliberately: destructive-command blocking is unnecessary inside a VM, format-on-save mid-task breaks an agent's exact-match sequential edits, and CLAUDE.md now survives compaction natively.

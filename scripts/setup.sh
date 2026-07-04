@@ -5,6 +5,8 @@ set -euo pipefail
 #
 # Writes:
 #   ~/.claude/CLAUDE.md               -- global rules
+#   ~/.claude/rules/coder*.md         -- coder MCP navigation rules (only when
+#                                        the coder MCP server is registered)
 #   ~/.claude/settings.json           -- merges env/permissions/defaults
 #   ~/.claude.json                    -- pre-trusts $HOME, adds chrome-devtools
 #                                        MCP (unless --skip-chrome-devtools)
@@ -110,6 +112,51 @@ install_file() {
   fi
 }
 
+# -- Rule install helper -----------------------------------------------------
+# install_rule <source> <signature>
+#
+# Idempotency for rules is content-based, NOT a whole-file diff: a rule counts
+# as installed if any file in ~/.claude/rules/ contains its signature string
+# (the rule's coder guide-tool reference). Rules files may have been renamed,
+# reworded, or folded into another rules file locally (e.g. lsp-manager's
+# lsp-navigation.md), and none of that should cause a re-add or an overwrite.
+install_rule() {
+  local src="$1" sig="$2"
+  local base dst name hit
+  base="$(basename "$src")"
+  dst="$RULES_DIR/$base"
+  name="~/.claude/rules/$base"
+  # `command grep` bypasses shell functions: environments that export a grep
+  # wrapper (e.g. ugrep with ignore-file handling) would otherwise skip files
+  # here and cause a customized rule to be treated as missing.
+  hit=""
+  if [ -d "$RULES_DIR" ]; then
+    hit="$(command grep -rlF -- "$sig" "$RULES_DIR" | head -n 1 || true)"
+    # Re-check the destination directly: if the directory sweep fails
+    # transiently, overwriting a rules file the user customized is the one
+    # mistake this helper must never make.
+    if [ -z "$hit" ] && [ -e "$dst" ] && command grep -qF -- "$sig" "$dst"; then
+      hit="$dst"
+    fi
+  fi
+  if [ -n "$hit" ]; then
+    if [ "$hit" = "$dst" ]; then
+      echo "  [current]  $name"
+    else
+      echo "  [current]  $name (content lives in ${hit/#$HOME/~})"
+    fi
+    return
+  fi
+  if [ -e "$dst" ]; then
+    backup_file "$dst"
+    install -m 0644 "$src" "$dst"
+    echo "  [updated]  $name"
+  else
+    install -m 0644 "$src" "$dst"
+    echo "  [copied]   $name"
+  fi
+}
+
 # -- Remove legacy artifacts -------------------------------------------------
 # Earlier versions replaced Claude Code's system prompt (~/.claude/anthropic.txt)
 # and shipped a wrapper binary to re-inject the environment block. The stock
@@ -127,6 +174,30 @@ done
 # -- Install global rules ----------------------------------------------------
 mkdir -p "$CLAUDE_DIR"
 install_file "$CONFIG_DIR/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md" 0644 "~/.claude/CLAUDE.md"
+
+# -- Install coder MCP rules --------------------------------------------------
+# Path-scoped rules that steer Claude to coder MCP tools (and the per-language
+# *_guide tool) instead of Read/grep/head/sed for code navigation. Installed
+# only when the coder MCP server is registered -- user scope or any project
+# scope in ~/.claude.json -- since the rules are useless without the server.
+coder_installed() {
+  [ -f "$CLAUDE_JSON" ] || return 1
+  jq -e '
+    ((.mcpServers // {}) | has("coder"))
+    or ([.projects // {} | to_entries[] | .value.mcpServers // {} | has("coder")] | any)
+  ' "$CLAUDE_JSON" >/dev/null
+}
+
+RULES_DIR="$CLAUDE_DIR/rules"
+if coder_installed; then
+  mkdir -p "$RULES_DIR"
+  install_rule "$CONFIG_DIR/rules/coder.md" 'mcp__coder__<language>_guide'
+  for lang in go typescript cpp python java; do
+    install_rule "$CONFIG_DIR/rules/coder-$lang.md" "mcp__coder__${lang}_guide"
+  done
+else
+  echo "  [skipped]  ~/.claude/rules/coder*.md (coder MCP not registered)"
+fi
 
 # -- Merge settings.json ----------------------------------------------------
 # Recursive merge with our keys winning on conflicts (arrays are replaced,

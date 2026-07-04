@@ -17,6 +17,8 @@ A drop-in setup for [Claude Code](https://github.com/anthropics/claude-code) tha
   - No hooks, deliberately: destructive-command blocking is unnecessary inside a VM, format-on-save mid-task breaks an agent's exact-match sequential edits, and CLAUDE.md now survives compaction natively.
   - Keys it doesn't ship (hooks, plugins, marketplaces) are left untouched, so it composes with lsp-manager.
 - Installs global rules to `~/.claude/CLAUDE.md`.
+- If the coder MCP server is registered in `~/.claude.json` (user scope or any project scope), installs coder navigation rules to `~/.claude/rules/`: `coder.md` plus path-scoped `coder-{go,typescript,cpp,python,java}.md`. These make Claude fetch the language's `mcp__coder__<language>_guide` tool early in a session -- so the guide is always the live version, never a stale copy -- and navigate code through coder tools instead of Read/grep/head/sed. Skipped entirely when coder isn't registered.
+  - Idempotency for rules is content-based, not a whole-file diff: a rule counts as installed if **any** file in `~/.claude/rules/` contains its signature (the `mcp__coder__<language>_guide` reference). Rules you've renamed, reworded, or folded into another rules file are left untouched; a `coder-*.md` file that has lost its signature is backed up and refreshed.
 - Registers the [chrome-devtools MCP](https://www.npmjs.com/package/chrome-devtools-mcp) server.
 - Pre-trusts `$HOME` in `~/.claude.json`: Claude's trust check walks up the directory tree, so one `hasTrustDialogAccepted: true` entry on `$HOME` suppresses the startup trust gate and per-path prompts (e.g. MCP tools operating outside the workspace) for every directory under home.
 - Removes legacy claude-plus artifacts (`~/.local/bin/claude-plus`, `~/.claude/anthropic.txt`) from earlier installs.
@@ -48,6 +50,7 @@ Just run `claude`. There is no wrapper anymore -- `bypassPermissions` comes from
 | Path | What |
 |------|------|
 | `~/.claude/CLAUDE.md` | Global rules |
+| `~/.claude/rules/coder*.md` | coder MCP navigation rules (only when the coder MCP server is registered) |
 | `~/.claude/settings.json` | Merged `env`, `permissions`, model/effort, editor, theme, status line, feature toggles |
 | `~/.claude.json` | Adds `chrome-devtools` to `mcpServers` (unless `--skip-chrome-devtools`) and sets `projects["$HOME"].hasTrustDialogAccepted = true` |
 

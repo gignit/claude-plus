@@ -2,6 +2,16 @@
 
 - Do not add `Co-Authored-By` trailers to git commits.
 
+# Reuse before you invent
+
+Before writing new code, understand what already exists. Search this codebase —
+and the libraries and SDK it already depends on — for a function, helper, type,
+or pattern that does the job, and use it. Follow the conventions already in the
+file instead of adding a second way to do the same thing, and don't hand-roll
+what a dependency or the SDK already provides. Reuse an existing helper rather
+than duplicating its logic inline. Reach for a new abstraction only after you
+have confirmed the code doesn't already have one.
+
 # Close the loop
 
 Before reporting any change with runtime behavior as done, exercise it: run the
